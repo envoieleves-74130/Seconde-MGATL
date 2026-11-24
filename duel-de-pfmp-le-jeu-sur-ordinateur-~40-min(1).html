@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Duel de PFMP — jeu à deux</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        color: #0f172a;
+        background: #0b1220;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(900px 500px at 15% -10%, rgba(99, 102, 241, 0.25), transparent 60%),
+          radial-gradient(800px 500px at 90% 0%, rgba(16, 185, 129, 0.18), transparent 55%),
+          #0b1220;
+        padding: 32px 16px;
+        color: #e2e8f0;
+      }
+      #app { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+      header { text-align: center; }
+      header .trophy { display: inline-flex; margin-bottom: 10px; color: #fbbf24; }
+      header h1 { font-size: 2rem; font-weight: 800; margin: 0 0 6px; color: #f8fafc; letter-spacing: -0.02em; }
+      header p { color: #94a3b8; font-size: 0.95rem; margin: 0; line-height: 1.5; }
+
+      .card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(6px);
+        animation: rise 0.45s ease both;
+      }
+      @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+      h2 { font-size: 1.1rem; font-weight: 700; margin: 0 0 18px; color: #f1f5f9; }
+
+      .players { display: flex; gap: 16px; }
+      .players > div { flex: 1; }
+      label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: #cbd5e1; }
+      label .dot { display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
+      .dot.p1 { background: #fb923c; }
+      .dot.p2 { background: #34d399; }
+      input[type="text"] {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        font-size: 1rem;
+        font-family: inherit;
+        outline: none;
+        background: rgba(255, 255, 255, 0.06);
+        color: #f1f5f9;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      input[type="text"]::placeholder { color: #64748b; }
+      input[type="text"]:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25); }
+
+      button { font-family: inherit; }
+      button.primary, .choice {
+        width: 100%;
+        padding: 13px 18px;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.12s ease, background 0.15s, border-color 0.15s, box-shadow 0.15s;
+      }
+      button.primary {
+        margin-top: 24px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        border: none;
+        box-shadow: 0 10px 24px -10px rgba(99, 102, 241, 0.7);
+      }
+      button.primary:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -10px rgba(99, 102, 241, 0.8); }
+      button.primary:active { transform: translateY(0); }
+
+      .scores { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 14px; border-radius: 999px;
+        font-size: 0.85rem; font-weight: 700;
+      }
+      .badge.p1 { background: rgba(251, 146, 60, 0.15); color: #fdba74; border: 1px solid rgba(251, 146, 60, 0.4); }
+      .badge.p2 { background: rgba(52, 211, 153, 0.12); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.4); }
+      .badge.timer { background: rgba(255, 255, 255, 0.08); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.15); }
+      .badge.timer.low { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.5); animation: pulse 0.8s infinite; }
+      .badge .icon { display: inline-flex; }
+      @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+      .badge.bump { animation: bump 0.4s ease; }
+      @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+      .progress { height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; }
+      .progress > div {
+        height: 100%; width: 0%;
+        background: linear-gradient(90deg, #6366f1, #a78bfa);
+        border-radius: 999px;
+        transition: width 0.4s ease;
+      }
+
+      .turn {
+        border-radius: 12px;
+        padding: 10px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: 1px solid transparent;
+      }
+      .turn.t0 { background: rgba(251, 146, 60, 0.12); color: #fdba74; border-color: rgba(251, 146, 60, 0.35); }
+      .turn.t1 { background: rgba(52, 211, 153, 0.1); color: #6ee7b7; border-color: rgba(52, 211, 153, 0.35); }
+
+      .card.question { animation: none; }
+      .question p.situation { font-weight: 600; line-height: 1.55; margin: 0 0 22px; color: #f1f5f9; font-size: 1.02rem; }
+      .choice {
+        text-align: left;
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+        color: #e2e8f0;
+        margin-bottom: 12px;
+        line-height: 1.45;
+        animation: fadeUp 0.35s ease both;
+      }
+      .choice:nth-child(2) { animation-delay: 0.07s; }
+      .choice:nth-child(3) { animation-delay: 0.14s; }
+      @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      .choice:not(:disabled):hover {
+        border-color: #818cf8;
+        background: rgba(99, 102, 241, 0.12);
+        transform: translateY(-2px);
+      }
+      .choice:disabled { cursor: default; transform: none; }
+      .choice.correct {
+        border-color: #34d399;
+        background: rgba(52, 211, 153, 0.15);
+        color: #6ee7b7;
+        animation: pop 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+      }
+      .choice.wrong {
+        border-color: #f87171;
+        background: rgba(239, 68, 68, 0.12);
+        color: #fca5a5;
+        animation: shake 0.45s ease both;
+      }
+      .choice.dim { border-color: rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.02); color: #64748b; }
+      @keyframes pop {
+        0% { transform: scale(1); }
+        45% { transform: scale(1.04); box-shadow: 0 0 0 6px rgba(52, 211, 153, 0.15); }
+        100% { transform: scale(1); }
+      }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-8px); }
+        40% { transform: translateX(7px); }
+        60% { transform: translateX(-5px); }
+        80% { transform: translateX(3px); }
+      }
+
+      .feedback {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 16px 18px;
+        animation: rise 0.35s ease both;
+      }
+      .feedback.good { border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.08); }
+      .feedback.bad { border-color: rgba(248, 113, 113, 0.4); background: rgba(239, 68, 68, 0.07); }
+      .feedback .headline {
+        display: flex; align-items: center; gap: 10px;
+        font-weight: 700; font-size: 0.95rem; margin-bottom: 8px;
+      }
+      .feedback.good .headline { color: #6ee7b7; }
+      .feedback.bad .headline { color: #fca5a5; }
+      .feedback .headline .icon { display: inline-flex; flex-shrink: 0; }
+      .feedback .explain { margin: 0; font-size: 0.92rem; color: #cbd5e1; line-height: 1.55; }
+
+      .end { text-align: center; }
+      .end .medal { display: inline-flex; margin-bottom: 8px; color: #fbbf24; animation: bump 0.7s ease; }
+      .end h2 { font-size: 1.6rem; margin: 10px 0 8px; }
+      .end p { color: #94a3b8; margin: 0 0 22px; line-height: 1.5; }
+      .end button.primary { margin-top: 0; }
+
+      .hidden { display: none !important; }
+      #play { display: flex; flex-direction: column; gap: 16px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <span class="trophy">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        </span>
+        <h1>Duel de PFMP</h1>
+        <p>
+          Jeu à deux sur ordinateur : à tour de rôle, répondez aux situations du stage.<br />
+          45 secondes par situation, 20 manches : environ 40 minutes de jeu. Le meilleur score gagne !
+        </p>
+      </header>
+
+      <div class="card" id="setup">
+        <h2>Les deux joueurs</h2>
+        <div class="players">
+          <div>
+            <label for="nameA"><span class="dot p1"></span>Joueur 1 (orange)</label>
+            <input type="text" id="nameA" placeholder="Élève 1" />
+          </div>
+          <div>
+            <label for="nameB"><span class="dot p2"></span>Joueur 2 (vert)</label>
+            <input type="text" id="nameB" placeholder="Élève 2" />
+          </div>
+        </div>
+        <button class="primary" id="startBtn">
+          <span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+            Commencer la partie
+          </span>
+        </button>
+      </div>
+
+      <div id="play" class="hidden">
+        <div class="scores">
+          <span class="badge p1" id="scoreBadge1"></span>
+          <span class="badge timer" id="timerBadge">
+            <span class="icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>
+            </span>
+            <span id="timerText"></span>
+          </span>
+          <span class="badge p2" id="scoreBadge2"></span>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <div class="turn" id="turnBox"></div>
+
+        <div class="card question">
+          <p class="situation" id="situation"></p>
+          <div id="choices"></div>
+          <div class="feedback hidden" id="feedback">
+            <div class="headline" id="feedbackHeadline">
+              <span class="icon" id="feedbackIcon"></span>
+              <span id="feedbackTitle"></span>
+            </div>
+            <p class="explain" id="feedbackExplain"></p>
+            <button class="primary" id="nextBtn">Situation suivante</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card end hidden" id="end">
+        <span class="medal" id="endIcon"></span>
+        <h2 id="endTitle"></h2>
+        <p id="endText"></p>
+        <button class="primary" id="replayBtn">Rejouer</button>
+      </div>
+    </div>
+
+    <script>
+      const ICONS = {
+        check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+        cross: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+        clockAlert: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>',
+        medal: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 5.12 2.2"/><path d="m13 12 5.88-9.8"/><path d="M8 7h8"/><circle cx="12" cy="17" r="5"/><path d="M12 18v-2h-.5"/></svg>',
+        handshake: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>',
+        trophy: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+      };
+
+      const QUESTIONS = [
+        {
+          situation: "Premier matin de PFMP. Tu arrives devant l'entreprise. Que fais-tu d'abord ?",
+          choices: [
+            "Tu t'annonces à l'accueil en te présentant clairement et poliment",
+            "Tu attends dehors que quelqu'un vienne te chercher",
+            "Tu entres directement dans le service qui t'accueille",
+          ],
+          correct: 0,
+          explication: "On se présente toujours à l'accueil : « Bonjour, je suis X, élève en 2de Bac Pro GA, attendu(e) pour une PFMP chez vous. »",
+        },
+        {
+          situation: "Ton tuteur est en réunion toute la matinée et personne ne t'a donné de tâche. Que fais-tu ?",
+          choices: [
+            "Tu scrolles tranquillement sur ton téléphone",
+            "Tu demandes poliment à un collaborateur s'il y a quelque chose à préparer",
+            "Tu t'assieds et tu attends qu'on te sollicite",
+          ],
+          correct: 1,
+          explication: "En entreprise, on fait preuve d'initiative raisonnable : on propose son aide au lieu d'attendre.",
+        },
+        {
+          situation: "On te confie le tri du courrier arrivé du jour. Par quoi commences-tu ?",
+          choices: [
+            "Par ouvrir les enveloppes pour gagner du temps",
+            "Par les classer : recommandés d'un côté, courrier ordinaire de l'autre",
+            "Par les empiler dans un carton sans les trier",
+          ],
+          correct: 1,
+          explication: "Le courrier recommandé se remet contre décharge : on le sépare d'abord, et on n'ouvre jamais le courrier des autres.",
+        },
+        {
+          situation: "Un appel arrive : « Bonjour, c'est Monsieur Martin, je serai indisponible toute l'après-midi. » Que notes-tu obligatoirement ?",
+          choices: [
+            "Juste le nom de la personne",
+            "Le nom, la date, l'heure de l'appel, l'objet du message et les coordonnées pour le rappeler",
+            "Rien, il appellera à nouveau",
+          ],
+          correct: 1,
+          explication: "Une prise de message complète comporte : appelant, heure, date, objet du message et coordonnées pour le rappel.",
+        },
+        {
+          situation: "Tu dois saisir des coordonnées de clients dans le tableur de l'entreprise. Quel est le bon réflexe ?",
+          choices: [
+            "Sauvegarder régulièrement et respecter le nom de fichier prévu",
+            "Enregistrer sur ta clé USB personnelle comme tu veux",
+            "Laisser le fichier ouvert tout le week-end",
+          ],
+          correct: 0,
+          explication: "On respecte l'organisation des fichiers de l'entreprise, on sauvegarde régulièrement et on ne copie pas les données ailleurs.",
+        },
+        {
+          situation: "Un client agacé hausse le ton au téléphone. Quelle est la meilleure réaction ?",
+          choices: [
+            "Répondre plus fort pour imposer le respect",
+            "Garder son calme, laisser parler, noter sa demande et proposer de le rappeler dès que possible",
+            "Raccrocher poliment",
+          ],
+          correct: 1,
+          explication: "Au téléphone : on écoute, on garde son calme, on note, on transmet. On ne raccroche jamais le premier.",
+        },
+        {
+          situation: "On te demande d'accueillir un visiteur dont le rendez-vous n'est pas dans l'agenda. Que fais-tu ?",
+          choices: [
+            "Lui dire qu'il n'y a pas de rendez-vous et le faire repartir",
+            "L'installer dans la salle d'attente, lui proposer de s'asseoir et vérifier auprès du service concerné",
+            "Le laisser attendre debout au milieu du service",
+          ],
+          correct: 1,
+          explication: "L'accueil de qualité : on fait patienter confortablement, on vérifie auprès du bon service, on ne rejette pas le visiteur d'emblée.",
+        },
+        {
+          situation: "Le standard sonne. Comment décroches-tu ?",
+          choices: [
+            "« Allo ? »",
+            "« [Nom de l'entreprise], bonjour, [Prénom], j'écoute. »",
+            "Tu attends que quelqu'un d'autre décroche",
+          ],
+          correct: 1,
+          explication: "La formule professionnelle : nom de l'entreprise, bonjour, prénom, « j'écoute ». Tu es la vitrine de l'entreprise !",
+        },
+        {
+          situation: "Tu n'as pas vu l'heure et tu arrives 10 minutes en retard. Que fais-tu ?",
+          choices: [
+            "Tu rentres discrètement par derrière pour éviter les remarques",
+            "Tu préviens dès que possible et tu t'excuses brièvement auprès de ton tuteur",
+            "Tu dis que le bus était plein, sans plus de précision",
+          ],
+          correct: 1,
+          explication: "En cas de retard, on prévient au plus vite et on assume : la ponctualité est une première compétence professionnelle.",
+        },
+        {
+          situation: "Tu as terminé en avance le classement qui t'a été confié. Que fais-tu ?",
+          choices: [
+            "Tu demandes s'il y a autre chose à faire ou si tu peux ranger le classeur",
+            "Tu attends la fin du stage",
+            "Tu notes que tu es en avance et tu t'installes devant ton écran",
+          ],
+          correct: 0,
+          explication: "Gestion du temps : quand on a terminé, on le signale et on propose la suite de l'activité ou un rangement nickel.",
+        },
+        {
+          situation: "Tu dois préparer l'affichage du planning de ton service. Quel outil utilises-tu en priorité ?",
+          choices: [
+            "Un post-it sur ton moniteur",
+            "Un tableur ou un agenda partagé, ensuite communiqué à toute l'équipe",
+            "Une photo de tableau que tu envoies à qui te le demande",
+          ],
+          correct: 1,
+          explication: "Le tableur ou l'agenda partagé garantit une information claire, à jour et accessible à toute l'équipe.",
+        },
+        {
+          situation: "On te demande d'imprimer un document confidentiel. Que fais-tu une fois l'impression terminée ?",
+          choices: [
+            "Tu le laisses dans l'imprimante, le tuteur viendra le chercher",
+            "Tu le récupères immédiatement et tu le portes en main propre au destinataire",
+            "Tu t'en fais une copie pour l'école",
+          ],
+          correct: 1,
+          explication: "Un document confidentiel ne se laisse jamais traîner : on le récupère aussitôt et on le remet au bon destinataire.",
+        },
+        {
+          situation: "Ton tuteur te confie la préparation de 30 devis à envoyer à des clients. Quel est le meilleur outil ?",
+          choices: [
+            "Un traitement de texte avec fusion et publipostage des adresses",
+            "30 feuilles écrites à la main, une enveloppe par destinataire",
+            "Un message vocal envoyé à toute la liste",
+          ],
+          correct: 0,
+          explication: "Le publipostage (traitement de texte + tableur d'adresses) est LA compétence attendue en Gestion-Administration.",
+        },
+        {
+          situation: "Un collègue te fait remarquer que tu as trop parlé de ce que tu as vu dans les dossiers de l'entreprise. Que réponds-tu ?",
+          choices: [
+            "« C'était quand même intéressant à raconter ! »",
+            "« Tu as raison, je ne divulguerai plus rien : la confidentialité fait partie du métier. »",
+            "« Ça dépend de ce que c'était. »",
+          ],
+          correct: 1,
+          explication: "La confidentialité est une obligation professionnelle : ce qui se voit ou se lit en entreprise ne se raconte pas dehors.",
+        },
+        {
+          situation: "Tu dois gérer l'agenda de ton tuteur : deux réunions se retrouvent au même créneau. Que fais-tu ?",
+          choices: [
+            "Tu modifies l'agenda sans rien dire pour faire propre",
+            "Tu signales le conflit à ton tuteur et tu lui proposes de décaler une réunion avant de modifier",
+            "Tu laisses les deux réunions au même moment",
+          ],
+          correct: 1,
+          explication: "En gestion d'agenda, on signale toujours les conflits et on propose une solution avant de modifier quoi que ce soit.",
+        },
+        {
+          situation: "On te confie la mise à jour du fichier des fournisseurs. Plusieurs adresses semblent erronées. Que fais-tu ?",
+          choices: [
+            "Tu les corriges comme tu le sens",
+            "Tu signales les anomalies et tu fais valider les corrections par ton tuteur",
+            "Tu supprimes les fournisseurs douteux",
+          ],
+          correct: 1,
+          explication: "En gestion de base de données, on ne modifie rien sans vérification : on signale et on fait valider.",
+        },
+        {
+          situation: "Un client vient chercher un colis sans justificatif. Quelle attitude professionnelle adoptes-tu ?",
+          choices: [
+            "Tu lui donnes le colis pour éviter un conflit",
+            "Tu restes courtois mais ferme sur la règle : le colis ne part qu'avec une pièce d'identité ou une signature",
+            "Tu dis que ce n'est pas ton problème",
+          ],
+          correct: 1,
+          explication: "Courtoisie et application de la règle : on reste aimable mais on respecte la procédure, sans exception.",
+        },
+        {
+          situation: "Tu arrives en jean troué et baskets multicolores alors que le cabinet attend une tenue correcte. Ton tuteur te le fait remarquer. Que fais-tu ?",
+          choices: [
+            "Tu t'excuses et tu proposes de venir plus sobre dès demain",
+            "Tu dis que le style, c'est la liberté",
+            "Tu continues ta PFMP comme d'habitude",
+          ],
+          correct: 0,
+          explication: "La tenue s'adapte au secteur : en cabinet comptable ou en mairie, on vient sobre et correct. Reconnaître l'écart et s'ajuster montre sa maturité.",
+        },
+        {
+          situation: "Fin de ta journée de PFMP. Que fais-tu avant de partir ?",
+          choices: [
+            "Tu ranges ton poste, tu vérifies que rien ne traîne et tu salues l'équipe",
+            "Tu t'éclipses en silence dès la sonnerie",
+            "Tu restes 30 minutes de plus pour faire bonne impression",
+          ],
+          correct: 0,
+          explication: "On range son espace de travail, on termine proprement ses tâches en cours et on salue l'équipe en partant.",
+        },
+        {
+          situation: "Tu dois préparer une réunion de 5 personnes : réserver la salle, le vidéoprojecteur et préparer les documents. Comment organises-tu cela ?",
+          choices: [
+            "Nulle part, tu t'en souviendras",
+            "Sur une fiche de préparation : qui, quoi, où, quand et le matériel prévu",
+            "Sur un post-it collé sur ton écran",
+          ],
+          correct: 1,
+          explication: "Toute tâche répétitive se note sur une fiche de préparation : c'est la rigueur administrative attendue en Gestion-Administration.",
+        },
+      ];
+
+      const TIME_LIMIT = 45;
+      const state = {
+        phase: "setup",
+        names: ["Élève 1", "Élève 2"],
+        turn: 0,
+        qIndex: 0,
+        scores: [0, 0],
+        answered: null,
+        timer: TIME_LIMIT,
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const setup = $("setup");
+      const play = $("play");
+      const endScreen = $("end");
+
+      function show(el) { el.classList.remove("hidden"); }
+      function hide(el) { el.classList.add("hidden"); }
+
+      function updateScores(bumpedIndex) {
+        $("scoreBadge1").textContent = state.names[0] + " : " + state.scores[0] + " pt" + (state.scores[0] > 1 ? "s" : "");
+        $("scoreBadge2").textContent = state.names[1] + " : " + state.scores[1] + " pt" + (state.scores[1] > 1 ? "s" : "");
+        if (bumpedIndex !== undefined) {
+          const badge = bumpedIndex === 0 ? $("scoreBadge1") : $("scoreBadge2");
+          badge.classList.remove("bump");
+          void badge.offsetWidth;
+          badge.classList.add("bump");
+        }
+      }
+
+      function updateTimer() {
+        const badge = $("timerBadge");
+        const s = Math.max(state.timer, 0);
+        $("timerText").textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+        badge.classList.toggle("low", state.answered === null && s <= 10);
+      }
+
+      function renderQuestion() {
+        const q = QUESTIONS[state.qIndex];
+        $("situation").textContent = q.situation;
+        $("turnBox").className = "turn t" + state.turn;
+        $("turnBox").textContent =
+          "À " + state.names[state.turn] + " de jouer ! (situation " + (state.qIndex + 1) + " sur " + QUESTIONS.length + ")";
+        $("progressBar").style.width = (state.qIndex / QUESTIONS.length) * 100 + "%";
+        updateScores();
+        updateTimer();
+
+        const box = $("choices");
+        box.innerHTML = "";
+        q.choices.forEach((choice, i) => {
+          const b = document.createElement("button");
+          b.className = "choice";
+          b.textContent = choice;
+          b.addEventListener("click", () => pick(i));
+          box.appendChild(b);
+        });
+        hide($("feedback"));
+      }
+
+      let timerInterval = null;
+      function startTimer() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          if (state.phase !== "play" || state.answered !== null) return;
+          state.timer -= 1;
+          updateTimer();
+          if (state.timer <= 0) {
+            state.answered = -1;
+            clearInterval(timerInterval);
+            reveal(null);
+          }
+        }, 1000);
+      }
+
+      function reveal(chosen) {
+        clearInterval(timerInterval);
+        const q = QUESTIONS[state.qIndex];
+        const buttons = document.querySelectorAll(".choice");
+
+        buttons.forEach((b, i) => {
+          b.disabled = true;
+          if (i === q.correct) b.classList.add("correct");
+          else if (i === chosen) b.classList.add("wrong");
+          else b.classList.add("dim");
+        });
+
+        const gagne = chosen === q.correct;
+        if (gagne) updateScores(state.turn);
+
+        const fb = $("feedback");
+        const headline = $("feedbackHeadline");
+        fb.classList.add(gagne ? "good" : "bad");
+        headline.querySelector(".icon").innerHTML = chosen === -1 ? ICONS.clockAlert : gagne ? ICONS.check : ICONS.cross;
+        if (chosen === -1) {
+          $("feedbackTitle").textContent = "Temps écoulé, pas de point !";
+        } else if (gagne) {
+          $("feedbackTitle").textContent = "Bravo " + state.names[state.turn] + ", 1 point !";
+        } else {
+          $("feedbackTitle").textContent = "Raté !";
+        }
+        $("feedbackExplain").textContent = q.explication;
+        $("nextBtn").textContent =
+          state.qIndex + 1 >= QUESTIONS.length ? "Voir le résultat" : "Situation suivante";
+        show(fb);
+      }
+
+      function pick(i) {
+        if (state.answered !== null) return;
+        state.answered = i;
+        if (i === QUESTIONS[state.qIndex].correct) {
+          state.scores[state.turn] += 1;
+        }
+        reveal(i);
+      }
+
+      function next() {
+        state.answered = null;
+        state.timer = TIME_LIMIT;
+        if (state.qIndex + 1 >= QUESTIONS.length) {
+          finish();
+        } else {
+          state.qIndex += 1;
+          state.turn = (state.turn + 1) % 2;
+          renderQuestion();
+          startTimer();
+        }
+      }
+
+      function finish() {
+        hide(play);
+        show(endScreen);
+        const [a, b] = state.scores;
+        if (a === b) {
+          $("endIcon").innerHTML = ICONS.handshake;
+          $("endTitle").textContent = "Égalité parfaite !";
+          $("endText").textContent = state.names[0] + " et " + state.names[1] + " : " + a + " points chacun. Belle maîtrise des situations de stage à tous les deux !";
+        } else {
+          const w = a > b ? 0 : 1;
+          $("endIcon").innerHTML = ICONS.medal;
+          $("endTitle").textContent = state.names[w] + " gagne la partie !";
+          $("endText").textContent = "Score final : " + state.names[0] + " " + a + " pts — " + state.names[1] + " " + b + " pts";
+        }
+      }
+
+      function start() {
+        state.names = [
+          $("nameA").value.trim() || "Élève 1",
+          $("nameB").value.trim() || "Élève 2",
+        ];
+        state.turn = 0;
+        state.qIndex = 0;
+        state.scores = [0, 0];
+        state.answered = null;
+        state.timer = TIME_LIMIT;
+        state.phase = "play";
+        hide(setup);
+        hide(endScreen);
+        show(play);
+        renderQuestion();
+        startTimer();
+      }
+
+      function restart() {
+        state.phase = "setup";
+        clearInterval(timerInterval);
+        hide(play);
+        hide(endScreen);
+        show(setup);
+      }
+
+      $("startBtn").addEventListener("click", start);
+      $("nextBtn").addEventListener("click", next);
+      $("replayBtn").addEventListener("click", restart);
+    </script>
+  </body>
+</html>
